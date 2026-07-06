@@ -54,7 +54,7 @@ defmodule AshStac.Pgstac.Contract do
   """
   @spec pgstac_version(pid() | module()) :: {:ok, Version.t()} | {:error, term()}
   def pgstac_version(conn) do
-    case query(conn, "SELECT pgstac.version()", []) do
+    case query(conn, "SELECT pgstac.get_version()", []) do
       {:ok, %{rows: [[version_string]]}} -> parse_version(version_string)
       {:error, reason} -> {:error, {:pgstac_version_unavailable, reason}}
     end

@@ -24,10 +24,9 @@ defmodule AshStac.Pgstac do
   @spec get_collection(conn(), String.t()) :: result(Collection.t() | nil)
   def get_collection(conn, id) when is_binary(id) do
     with {:ok, rows} <-
-           query_rows(conn, "SELECT content FROM pgstac.collections WHERE id = $1", [id]) do
-      rows
-      |> one()
-      |> decode_document(Collection)
+           query_rows(conn, "SELECT content FROM pgstac.collections WHERE id = $1", [id]),
+         {:ok, document} <- one(rows) do
+      decode_document(document, Collection)
     end
   end
 
@@ -64,10 +63,9 @@ defmodule AshStac.Pgstac do
              conn,
              "SELECT content FROM pgstac.items WHERE collection = $1 AND id = $2",
              [collection_id, item_id]
-           ) do
-      rows
-      |> one()
-      |> decode_document(Item)
+           ),
+         {:ok, document} <- one(rows) do
+      decode_document(document, Item)
     end
   end
 
@@ -117,10 +115,9 @@ defmodule AshStac.Pgstac do
   def search(conn, search_query) do
     with {:ok, search_query} <- SearchQuery.new(search_query),
          body <- SearchQuery.to_map(search_query),
-         {:ok, rows} <- query_rows(conn, "SELECT pgstac.search($1)", [body]) do
-      rows
-      |> one()
-      |> case do
+         {:ok, rows} <- query_rows(conn, "SELECT pgstac.search($1)", [body]),
+         {:ok, result} <- one(rows) do
+      case result do
         nil -> {:error, :empty_search_result}
         feature_collection when is_map(feature_collection) -> {:ok, feature_collection}
         other -> {:error, {:invalid_search_result, other}}
@@ -138,8 +135,9 @@ defmodule AshStac.Pgstac do
   defp query(conn, sql, params) when is_pid(conn), do: Postgrex.query(conn, sql, params)
   defp query(conn, sql, params) when is_atom(conn), do: conn.query(sql, params)
 
-  defp one([]), do: nil
-  defp one([[document]]), do: document
+  defp one([]), do: {:ok, nil}
+  defp one([[document]]), do: {:ok, document}
+  defp one(rows), do: {:error, {:invalid_result, rows}}
 
   defp decode_document(nil, _module), do: {:ok, nil}
   defp decode_document(document, module), do: module.new(document)

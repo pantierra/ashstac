@@ -15,7 +15,7 @@ It keeps the boundaries explicit:
 - STAC 1.1.0 Collection and Item structs.
 - Embedded Asset and Link structs.
 - JSON encode/decode with unknown field preservation.
-- Core required-field validation.
+- Core STAC 1.1.0 required-field validation.
 - A thin Postgrex-backed pgSTAC adapter.
 - Optional Ash resources/actions over the adapter.
 - TiTiler.PgSTAC URL helpers.
@@ -50,6 +50,11 @@ It keeps the boundaries explicit:
 AshStac.Item.to_map(item)["proj:epsg"]
 ```
 
+Collections must have `"type" => "Collection"`. Items must have
+`"type" => "Feature"` and a `properties.datetime` key. Items whose `geometry` is
+`nil` may omit `bbox`; serialization preserves the required `geometry: nil`
+field instead of dropping it.
+
 ## pgSTAC Adapter
 
 Use a Postgrex connection and keep all pgSTAC calls behind `AshStac.Pgstac`.
@@ -69,9 +74,16 @@ Use a Postgrex connection and keep all pgSTAC calls behind `AshStac.Pgstac`.
 {:ok, items} = AshStac.Pgstac.search_items(conn, %{"collections" => ["example-cogs"]})
 ```
 
+`search_items/2` decodes each returned feature as a full `AshStac.Item`. Use raw
+`search/2` when passing `fields` projections or when you want the pgSTAC
+FeatureCollection exactly as returned.
+
 ## Ash Facade
 
-The Ash resources are manual-action facades. They do not own pgSTAC tables.
+The Ash resources are manual-action facades. They do not own pgSTAC tables, do
+not provide an Ash data layer, and still require the caller to pass a connection
+argument. Use them when that shape fits a host Ash application; otherwise call
+`AshStac.Pgstac` directly.
 
 ```elixir
 query =

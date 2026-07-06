@@ -6,6 +6,7 @@ defmodule AshStac.DocumentTest do
   describe "collections" do
     test "round-trips core and extension fields" do
       document = %{
+        "type" => "Collection",
         "stac_version" => "1.1.0",
         "id" => "sentinel-2",
         "description" => "Sentinel-2 scenes",
@@ -39,6 +40,24 @@ defmodule AshStac.DocumentTest do
       assert {:missing_field, "id"} in errors
       assert {:missing_field, "links"} in errors
     end
+
+    test "requires the Collection type" do
+      document = %{
+        "type" => "Feature",
+        "stac_version" => "1.1.0",
+        "id" => "sentinel-2",
+        "description" => "Sentinel-2 scenes",
+        "license" => "proprietary",
+        "extent" => %{
+          "spatial" => %{"bbox" => [[-180, -90, 180, 90]]},
+          "temporal" => %{"interval" => [["2020-01-01T00:00:00Z", nil]]}
+        },
+        "links" => [%{"rel" => "self", "href" => "https://example.test/collections/sentinel-2"}]
+      }
+
+      assert {:error, errors} = Collection.new(document)
+      assert {:invalid_field, "type", "Feature"} in errors
+    end
   end
 
   describe "items" do
@@ -62,6 +81,77 @@ defmodule AshStac.DocumentTest do
       assert {:ok, "sentinel-2"} = Item.collection_id(item)
       assert Item.to_map(item)["proj:epsg"] == 4326
       assert Item.to_map(item)["assets"]["data"]["href"] == "s3://bucket/item.tif"
+    end
+
+    test "round-trips items with null geometry and omitted bbox" do
+      document = %{
+        "type" => "Feature",
+        "stac_version" => "1.1.0",
+        "id" => "item-1",
+        "collection" => "sentinel-2",
+        "geometry" => nil,
+        "properties" => %{"datetime" => nil},
+        "links" => [
+          %{"rel" => "collection", "href" => "https://example.test/collections/sentinel-2"}
+        ],
+        "assets" => %{"data" => %{"href" => "s3://bucket/item.tif"}}
+      }
+
+      assert {:ok, item} = Item.new(document)
+      assert %{"geometry" => nil} = Item.to_map(item)
+      refute Map.has_key?(Item.to_map(item), "bbox")
+      assert {:ok, ^item} = item |> Item.to_map() |> Item.new()
+    end
+
+    test "requires bbox when geometry is present" do
+      document = %{
+        "type" => "Feature",
+        "stac_version" => "1.1.0",
+        "id" => "item-1",
+        "geometry" => %{"type" => "Point", "coordinates" => [0, 0]},
+        "properties" => %{"datetime" => "2024-01-01T00:00:00Z"},
+        "links" => [
+          %{"rel" => "collection", "href" => "https://example.test/collections/sentinel-2"}
+        ],
+        "assets" => %{"data" => %{"href" => "s3://bucket/item.tif"}}
+      }
+
+      assert {:error, errors} = Item.new(document)
+      assert {:missing_field, "bbox"} in errors
+    end
+
+    test "requires the Feature type" do
+      document = %{
+        "type" => "Collection",
+        "stac_version" => "1.1.0",
+        "id" => "item-1",
+        "geometry" => nil,
+        "properties" => %{"datetime" => nil},
+        "links" => [
+          %{"rel" => "collection", "href" => "https://example.test/collections/sentinel-2"}
+        ],
+        "assets" => %{"data" => %{"href" => "s3://bucket/item.tif"}}
+      }
+
+      assert {:error, errors} = Item.new(document)
+      assert {:invalid_field, "type", "Collection"} in errors
+    end
+
+    test "requires datetime in item properties" do
+      document = %{
+        "type" => "Feature",
+        "stac_version" => "1.1.0",
+        "id" => "item-1",
+        "geometry" => nil,
+        "properties" => %{},
+        "links" => [
+          %{"rel" => "collection", "href" => "https://example.test/collections/sentinel-2"}
+        ],
+        "assets" => %{"data" => %{"href" => "s3://bucket/item.tif"}}
+      }
+
+      assert {:error, errors} = Item.new(document)
+      assert {:missing_field, "properties.datetime"} in errors
     end
   end
 

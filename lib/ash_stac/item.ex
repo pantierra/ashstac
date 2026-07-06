@@ -18,16 +18,7 @@ defmodule AshStac.Item do
     "collection"
   ]
 
-  @required_fields [
-    "type",
-    "stac_version",
-    "id",
-    "geometry",
-    "bbox",
-    "properties",
-    "links",
-    "assets"
-  ]
+  @required_fields ["type", "stac_version", "id", "geometry", "properties", "links", "assets"]
 
   @enforce_keys [:type, :stac_version, :id, :geometry, :bbox, :properties, :links, :assets]
   defstruct [
@@ -50,7 +41,7 @@ defmodule AshStac.Item do
           stac_extensions: [String.t()],
           id: String.t(),
           geometry: map() | nil,
-          bbox: [number()],
+          bbox: [number()] | nil,
           properties: map(),
           links: [Link.t()],
           assets: %{optional(String.t()) => Asset.t()},
@@ -105,7 +96,6 @@ defmodule AshStac.Item do
       "stac_version" => item.stac_version,
       "stac_extensions" => item.stac_extensions,
       "id" => item.id,
-      "geometry" => item.geometry,
       "bbox" => item.bbox,
       "properties" => item.properties,
       "links" => Enum.map(item.links, &Link.to_map/1),
@@ -113,21 +103,27 @@ defmodule AshStac.Item do
       "collection" => item.collection
     }
     |> Document.put_known(item.extra)
+    |> Map.put("geometry", item.geometry)
   end
 
   defp validate(map) do
     Document.collect_errors([
       Document.require_fields(map, @required_fields),
-      Document.require_string(map, "type"),
+      type_valid?(map),
       Document.require_string(map, "stac_version"),
       Document.require_string(map, "id"),
       geometry_valid?(map),
       bbox_valid?(map),
       Document.require_map(map, "properties"),
+      datetime_present?(map),
       Document.require_list(map, "links"),
       Document.require_map(map, "assets")
     ])
   end
+
+  defp type_valid?(%{"type" => "Feature"}), do: :ok
+  defp type_valid?(%{"type" => type}), do: {:error, {:invalid_field, "type", type}}
+  defp type_valid?(_map), do: {:error, {:missing_field, "type"}}
 
   defp geometry_valid?(%{"geometry" => nil}), do: :ok
   defp geometry_valid?(%{"geometry" => geometry}) when is_map(geometry), do: :ok
@@ -137,9 +133,21 @@ defmodule AshStac.Item do
 
   defp geometry_valid?(_map), do: {:error, {:missing_field, "geometry"}}
 
+  defp bbox_valid?(%{"geometry" => nil, "bbox" => bbox}) when is_list(bbox), do: :ok
+  defp bbox_valid?(%{"geometry" => nil}), do: :ok
   defp bbox_valid?(%{"bbox" => bbox}) when is_list(bbox), do: :ok
   defp bbox_valid?(%{"bbox" => bbox}), do: {:error, {:invalid_field, "bbox", bbox}}
   defp bbox_valid?(_map), do: {:error, {:missing_field, "bbox"}}
+
+  defp datetime_present?(%{"properties" => properties}) when is_map(properties) do
+    if Map.has_key?(properties, "datetime") do
+      :ok
+    else
+      {:error, {:missing_field, "properties.datetime"}}
+    end
+  end
+
+  defp datetime_present?(_map), do: :ok
 
   defp decode_links(links) do
     links

@@ -6,6 +6,7 @@ defmodule AshStac.MixProject do
       app: :ash_stac,
       version: "0.0.1",
       elixir: "~> 1.20",
+      description: description(),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       aliases: aliases(),
@@ -30,6 +31,7 @@ defmodule AshStac.MixProject do
     [
       {:ash, "~> 3.29.3"},
       {:credo, "~> 1.7.19", only: [:dev, :test], runtime: false},
+      {:ex_doc, "~> 0.38", only: [:dev, :test], runtime: false},
       {:jason, "~> 1.4"},
       {:postgrex, "~> 0.22.2"}
     ]
@@ -49,14 +51,22 @@ defmodule AshStac.MixProject do
   defp package do
     [
       licenses: ["MIT"],
-      links: %{}
+      links: %{
+        "GitHub" => "https://github.com/pantierra/ashstac",
+        "pgSTAC" => "https://github.com/stac-utils/pgstac"
+      }
     ]
   end
 
   defp docs do
     [
       main: "readme",
+      source_url: "https://github.com/pantierra/ashstac",
       extras: ["README.md", "LICENSE", "guides/pgstac_contract.md"]
     ]
+  end
+
+  defp description do
+    "Small Elixir helpers for STAC documents backed by pgSTAC."
   end
 end

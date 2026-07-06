@@ -20,6 +20,24 @@ The first adapter supports only:
 - Run a structured item search through pgSTAC.
 - Check PostgreSQL and pgSTAC versions at runtime.
 
+`search_items/2` expects pgSTAC to return complete STAC Item features that can
+be decoded by `AshStac.Item`. Use `search/2` for raw FeatureCollection responses,
+partial `fields` projections, or responses that should not be validated as full
+items.
+
+## Document Validation Boundary
+
+`AshStac` validates the STAC 1.1.0 core shape needed to safely round-trip
+Collections and Items:
+
+- Collections must have `"type": "Collection"` and required core fields.
+- Items must have `"type": "Feature"`, required core fields, and a
+  `properties.datetime` key.
+- Items with `null` geometry may omit `bbox`; serialization preserves the
+  required `geometry: null` field.
+
+Extension fields are preserved but not schema-validated.
+
 ## Deliberately Unsupported
 
 - Running pgSTAC migrations from Elixir.
@@ -32,3 +50,10 @@ The first adapter supports only:
 
 All direct SQL belongs in `AshStac.Pgstac`. Other modules should work with typed
 STAC documents and adapter functions instead of reaching into pgSTAC tables.
+
+## Ash Facade Boundary
+
+The Ash resources are manual-action convenience wrappers around
+`AshStac.Pgstac`. They do not define an Ash data layer, do not own database
+tables, and do not replace direct adapter calls for callers that do not need Ash
+resource actions.

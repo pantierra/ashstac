@@ -8,6 +8,7 @@ defmodule AshStac.AshFacadeTest do
          rows: [
            [
              %{
+               "type" => "Collection",
                "stac_version" => "1.1.0",
                "id" => "sentinel-2",
                "description" => "Sentinel-2 scenes",

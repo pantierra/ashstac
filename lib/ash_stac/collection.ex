@@ -25,9 +25,9 @@ defmodule AshStac.Collection do
     "item_assets"
   ]
 
-  @required_fields ["stac_version", "id", "description", "license", "extent", "links"]
+  @required_fields ["type", "stac_version", "id", "description", "license", "extent", "links"]
 
-  @enforce_keys [:id, :description, :license, :extent, :links]
+  @enforce_keys [:type, :id, :description, :license, :extent, :links]
   defstruct [
     :type,
     :stac_version,
@@ -124,6 +124,7 @@ defmodule AshStac.Collection do
   defp validate(map) do
     Document.collect_errors([
       Document.require_fields(map, @required_fields),
+      type_valid?(map),
       Document.require_string(map, "stac_version"),
       Document.require_string(map, "id"),
       Document.require_string(map, "description"),
@@ -132,6 +133,10 @@ defmodule AshStac.Collection do
       Document.require_list(map, "links")
     ])
   end
+
+  defp type_valid?(%{"type" => "Collection"}), do: :ok
+  defp type_valid?(%{"type" => type}), do: {:error, {:invalid_field, "type", type}}
+  defp type_valid?(_map), do: {:error, {:missing_field, "type"}}
 
   defp decode_links(links) do
     links

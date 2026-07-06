@@ -21,7 +21,7 @@ services:
       retries: 12
 
   seed:
-    image: ghcr.io/stac-utils/pgstac:v0.9.11
+    image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
     depends_on:
       pgstac:
         condition: service_healthy
@@ -34,9 +34,9 @@ services:
     volumes:
       - ./examples/minimal/seed:/seed:ro
     command: >
-      sh -c "pypgstac migrate &&
-             pypgstac load collections /seed/collection.json &&
-             pypgstac load items /seed/items.ndjson"
+      sh -c "uvx --from 'pypgstac[psycopg]' pypgstac migrate &&
+             uvx --from 'pypgstac[psycopg]' pypgstac load collections /seed/collection.json &&
+             uvx --from 'pypgstac[psycopg]' pypgstac load items /seed/items.ndjson"
 
   titiler:
     image: ghcr.io/stac-utils/titiler-pgstac:2.1.0

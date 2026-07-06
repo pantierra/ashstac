@@ -8,12 +8,20 @@ defmodule AshStac.PgstacTest do
       {:ok, %{rows: [["16.4 (Debian 16.4-1)"]]}}
     end
 
-    def query("SELECT pgstac.version()", []) do
+    def query("SELECT pgstac.get_version()", []) do
       {:ok, %{rows: [["0.9.2"]]}}
     end
 
     def query("SELECT content FROM pgstac.collections WHERE id = $1", ["sentinel-2"]) do
       {:ok, %{rows: [[collection_document()]]}}
+    end
+
+    def query("SELECT content FROM pgstac.collections WHERE id = $1", ["missing"]) do
+      {:ok, %{rows: []}}
+    end
+
+    def query("SELECT content FROM pgstac.collections WHERE id = $1", ["duplicate"]) do
+      {:ok, %{rows: [[collection_document()], [collection_document()]]}}
     end
 
     def query("SELECT content FROM pgstac.items WHERE collection = $1 AND id = $2", [
@@ -41,6 +49,7 @@ defmodule AshStac.PgstacTest do
 
     defp collection_document do
       %{
+        "type" => "Collection",
         "stac_version" => "1.1.0",
         "id" => "sentinel-2",
         "description" => "Sentinel-2 scenes",
@@ -79,6 +88,15 @@ defmodule AshStac.PgstacTest do
              Pgstac.get_collection(FakeConn, "sentinel-2")
 
     assert {:ok, ^collection} = Pgstac.upsert_collection(FakeConn, collection)
+  end
+
+  test "returns nil for missing documents" do
+    assert {:ok, nil} = Pgstac.get_collection(FakeConn, "missing")
+  end
+
+  test "returns an error for unexpected document row shapes" do
+    assert {:error, {:invalid_result, [[_], [_]]}} =
+             Pgstac.get_collection(FakeConn, "duplicate")
   end
 
   test "reads and upserts items" do
