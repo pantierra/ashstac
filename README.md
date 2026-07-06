@@ -10,6 +10,14 @@ It keeps the boundaries explicit:
 - Ash is an optional facade for host applications.
 - TiTiler.PgSTAC remains a separate tile service.
 
+## When To Use This
+
+Use `AshStac` when you already run pgSTAC and want Elixir helpers for STAC
+documents, pgSTAC reads/upserts/searches, and optional Ash manual actions.
+
+Do not use it as a full STAC API server, ingestion system, authorization layer,
+or tile renderer.
+
 ## What Is Included
 
 - STAC 1.1.0 Collection and Item structs.
@@ -50,14 +58,22 @@ It keeps the boundaries explicit:
 AshStac.Item.to_map(item)["proj:epsg"]
 ```
 
-Collections must have `"type" => "Collection"`. Items must have
-`"type" => "Feature"` and a `properties.datetime` key. Items whose `geometry` is
-`nil` may omit `bbox`; serialization preserves the required `geometry: nil`
-field instead of dropping it.
+## Validation Boundary
+
+`AshStac` validates only the STAC 1.1.0 core shape needed for safe
+round-tripping:
+
+- Collections must have `"type" => "Collection"` and required core fields.
+- Items must have `"type" => "Feature"`, required core fields, and a
+  `properties.datetime` key.
+- Items whose `geometry` is `nil` may omit `bbox`; serialization preserves the
+  required `geometry: nil` field.
+- Unknown extension fields are preserved, not schema-validated.
 
 ## pgSTAC Adapter
 
-Use a Postgrex connection and keep all pgSTAC calls behind `AshStac.Pgstac`.
+`AshStac.Pgstac` is the primary runtime API. Use a Postgrex connection and keep
+all pgSTAC calls behind this adapter.
 
 ```elixir
 {:ok, conn} =
@@ -80,10 +96,10 @@ FeatureCollection exactly as returned.
 
 ## Ash Facade
 
-The Ash resources are manual-action facades. They do not own pgSTAC tables, do
-not provide an Ash data layer, and still require the caller to pass a connection
-argument. Use them when that shape fits a host Ash application; otherwise call
-`AshStac.Pgstac` directly.
+The Ash resources are optional manual-action wrappers around `AshStac.Pgstac`.
+They do not own pgSTAC tables, provide an Ash data layer, or manage the database
+connection. Use them only when a host Ash application wants resource actions;
+otherwise call `AshStac.Pgstac` directly.
 
 ```elixir
 query =

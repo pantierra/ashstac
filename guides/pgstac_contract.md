@@ -27,7 +27,7 @@ items.
 
 ## Document Validation Boundary
 
-`AshStac` validates the STAC 1.1.0 core shape needed to safely round-trip
+`AshStac` validates only the STAC 1.1.0 core shape needed to safely round-trip
 Collections and Items:
 
 - Collections must have `"type": "Collection"` and required core fields.
@@ -55,5 +55,5 @@ STAC documents and adapter functions instead of reaching into pgSTAC tables.
 
 The Ash resources are manual-action convenience wrappers around
 `AshStac.Pgstac`. They do not define an Ash data layer, do not own database
-tables, and do not replace direct adapter calls for callers that do not need Ash
-resource actions.
+tables, and do not manage the database connection. Prefer direct adapter calls
+unless a host Ash application specifically wants resource actions.
