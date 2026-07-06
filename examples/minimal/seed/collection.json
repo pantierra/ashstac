@@ -1,0 +1,29 @@
+{
+  "type": "Collection",
+  "stac_version": "1.1.0",
+  "id": "example-cogs",
+  "description": "Minimal example collection for AshStac development.",
+  "license": "CC-BY-4.0",
+  "extent": {
+    "spatial": {
+      "bbox": [[-1.0, -1.0, 1.0, 1.0]]
+    },
+    "temporal": {
+      "interval": [["2024-01-01T00:00:00Z", null]]
+    }
+  },
+  "links": [
+    {
+      "rel": "self",
+      "href": "http://localhost:8081/collections/example-cogs",
+      "type": "application/json"
+    }
+  ],
+  "item_assets": {
+    "cog": {
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "roles": ["data"],
+      "title": "Example COG"
+    }
+  }
+}

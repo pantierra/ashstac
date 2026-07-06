@@ -1,0 +1,58 @@
+services:
+  pgstac:
+    image: ghcr.io/stac-utils/pgstac:v0.9.11
+    environment:
+      POSTGRES_USER: username
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: postgis
+      PGUSER: username
+      PGPASSWORD: password
+      PGDATABASE: postgis
+      PGHOST: /var/run/postgresql
+      PGPORT: 5432
+    ports:
+      - "5439:5432"
+    volumes:
+      - pgstac-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h /var/run/postgresql -p 5432 -U username -d postgis"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  seed:
+    image: ghcr.io/stac-utils/pgstac:v0.9.11
+    depends_on:
+      pgstac:
+        condition: service_healthy
+    environment:
+      PGHOST: pgstac
+      PGPORT: 5432
+      PGUSER: username
+      PGPASSWORD: password
+      PGDATABASE: postgis
+    volumes:
+      - ./examples/minimal/seed:/seed:ro
+    command: >
+      sh -c "pypgstac migrate &&
+             pypgstac load collections /seed/collection.json &&
+             pypgstac load items /seed/items.ndjson"
+
+  titiler:
+    image: ghcr.io/stac-utils/titiler-pgstac:2.1.0
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql://username:password@pgstac:5432/postgis
+      TITILER_PGSTAC_API_ENABLE_ASSETS_ENDPOINTS: "TRUE"
+    ports:
+      - "8081:8000"
+    command: >
+      uvicorn titiler.pgstac.main:app
+      --host 0.0.0.0
+      --port 8000
+      --workers 1
+
+volumes:
+  pgstac-data:
