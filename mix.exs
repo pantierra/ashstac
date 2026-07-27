@@ -29,7 +29,7 @@ defmodule AshStac.MixProject do
 
   defp deps do
     [
-      {:ash, "~> 3.29.3"},
+      {:ash, "~> 3.30.1"},
       {:credo, "~> 1.7.19", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.38", only: [:dev, :test], runtime: false},
       {:jason, "~> 1.4"},
